@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
+	log "log/slog"
 	"net/http"
 	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/log"
 	"github.com/totvslabs/couchbase-exporter/client"
 	"github.com/totvslabs/couchbase-exporter/collector"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -30,12 +30,11 @@ var (
 )
 
 func main() {
-	log.AddFlags(app)
 	app.Version(version)
 	app.HelpFlag.Short('h')
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
-	log.Infof("starting couchbase-exporter %s...", version)
+	log.Info(fmt.Sprintf("starting couchbase-exporter %s...", version))
 
 	var client = client.New(*couchbaseURL, *couchbaseUsername, *couchbasePassword)
 
@@ -66,8 +65,9 @@ func main() {
 			`)
 	})
 
-	log.Infof("server listening on %s", *listenAddress)
+	log.Info(fmt.Sprintf("server listening on %s", *listenAddress))
 	if err := http.ListenAndServe(*listenAddress, nil); err != nil {
-		log.Fatalf("failed to start server: %v", err)
+		log.Error(fmt.Sprintf("failed to start server: %v", err))
+		os.Exit(1)
 	}
 }

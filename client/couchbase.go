@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	log "log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prometheus/common/log"
 )
 
 // Client is the couchbase client
@@ -31,11 +31,11 @@ func New(url, user, password string) Client {
 	go func() {
 		nodes, err := client.Nodes()
 		if err != nil {
-			log.Warnf("couldn't verify server version compatibility: %s", err.Error())
+			log.Warn(fmt.Sprintf("couldn't verify server version compatibility: %s", err.Error()))
 			return
 		}
 		if !strings.HasPrefix(nodes.Nodes[0].Version, "5.") {
-			log.Warnf("couchbase %s is not fully supported", nodes.Nodes[0].Version)
+			log.Warn(fmt.Sprintf("couchbase %s is not fully supported", nodes.Nodes[0].Version))
 		}
 	}()
 	return client

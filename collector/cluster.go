@@ -1,11 +1,11 @@
 package collector
 
 import (
+	log "log/slog"
 	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"github.com/totvslabs/couchbase-exporter/client"
 )
 

@@ -1,11 +1,12 @@
 package collector
 
 import (
+	"fmt"
+	log "log/slog"
 	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"github.com/totvslabs/couchbase-exporter/client"
 )
 
@@ -1448,7 +1449,7 @@ func (c *bucketsCollector) Collect(ch chan<- prometheus.Metric) {
 
 			stats, err := c.client.BucketStats(bucket.Name)
 			if err != nil {
-				log.With("bucket", bucket.Name).Errorf("failed to scrape bucket stats: err: %s", err.Error())
+				log.With("bucket", bucket.Name).Error(fmt.Sprintf("failed to scrape bucket stats: err: %s", err.Error()))
 				// Directly send metric to channel
 				ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 0, bucket.Name)
 				return

@@ -1,11 +1,12 @@
 package collector
 
 import (
+	"fmt"
+	log "log/slog"
 	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"github.com/totvslabs/couchbase-exporter/client"
 )
 
@@ -181,7 +182,7 @@ func (c *nodesCollector) Collect(ch chan<- prometheus.Metric) {
 
 	// nolint: lll
 	for _, node := range nodes.Nodes {
-		log.Debugf("Collecting %s node metrics...", node.Hostname)
+		log.Debug(fmt.Sprintf("Collecting %s node metrics...", node.Hostname))
 		ch <- prometheus.MustNewConstMetric(c.healthy, prometheus.GaugeValue, fromBool(node.Status == "healthy"), node.Hostname)
 		ch <- prometheus.MustNewConstMetric(c.interestingStatsCouchDocsActualDiskSize, prometheus.GaugeValue, node.InterestingStats.CouchDocsActualDiskSize, node.Hostname)
 		ch <- prometheus.MustNewConstMetric(c.interestingStatsCouchDocsDataSize, prometheus.GaugeValue, node.InterestingStats.CouchDocsDataSize, node.Hostname)

@@ -1,11 +1,12 @@
 package collector
 
 import (
+	"fmt"
+	log "log/slog"
 	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"github.com/totvslabs/couchbase-exporter/client"
 )
 
@@ -154,7 +155,7 @@ func (c *taskCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 			compactsReported[task.Bucket] = true
 		case "xdcr":
-			log.Debugf("found xdcr tasks from %s to %s", task.Source, task.Target)
+			log.Debug(fmt.Sprintf("found xdcr tasks from %s to %s", task.Source, task.Target))
 			ch <- prometheus.MustNewConstMetric(c.xdcrChangesLeft, prometheus.GaugeValue, float64(task.ChangesLeft), task.Source, task.Target)
 			ch <- prometheus.MustNewConstMetric(c.xdcrDocsChecked, prometheus.GaugeValue, float64(task.DocsChecked), task.Source, task.Target)
 			ch <- prometheus.MustNewConstMetric(c.xdcrDocsWritten, prometheus.GaugeValue, float64(task.DocsWritten), task.Source, task.Target)
