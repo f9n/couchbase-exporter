@@ -14,8 +14,13 @@ type taskCollector struct {
 	mutex  sync.Mutex
 	client client.Client
 
-	up                    *prometheus.Desc
-	scrapeDuration        *prometheus.Desc
+	bucketsCache                []client.Bucket
+	cacheTimestamp              time.Time
+	bucketsCacheRefreshInterval time.Duration
+
+	up             *prometheus.Desc
+	scrapeDuration *prometheus.Desc
+
 	rebalance             *prometheus.Desc
 	rebalancePerNode      *prometheus.Desc
 	compacting            *prometheus.Desc
@@ -28,11 +33,12 @@ type taskCollector struct {
 }
 
 // NewTasksCollector tasks collector
-func NewTasksCollector(client client.Client) prometheus.Collector {
+func NewTasksCollector(client client.Client, bucketsCacheRefreshInterval int) prometheus.Collector {
 	const subsystem = "task"
 	// nolint: lll
-	return &taskCollector{
-		client: client,
+	collector := &taskCollector{
+		client:                      client,
+		bucketsCacheRefreshInterval: time.Duration(bucketsCacheRefreshInterval) * time.Second,
 		up: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, subsystem, "up"),
 			"Couchbase task API is responding",
@@ -100,6 +106,11 @@ func NewTasksCollector(client client.Client) prometheus.Collector {
 			nil,
 		),
 	}
+
+	// Start the background update process
+	go collector.startBackgroundUpdate(collector.bucketsCacheRefreshInterval)
+
+	return collector
 }
 
 // Describe all metrics
@@ -117,6 +128,27 @@ func (c *taskCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.xdcrErrors
 }
 
+func (c *taskCollector) startBackgroundUpdate(interval time.Duration) {
+	for {
+		c.updateBucketsCache()
+		time.Sleep(interval)
+	}
+}
+
+func (c *taskCollector) updateBucketsCache() {
+	log.Info("[taskCollector] Refreshing buckets cache...")
+	buckets, err := c.client.Buckets()
+	if err != nil {
+		log.With("error", err).Error("failed to refresh buckets cache")
+		return
+	}
+
+	c.mutex.Lock()
+	c.bucketsCache = buckets
+	c.cacheTimestamp = time.Now()
+	c.mutex.Unlock()
+}
+
 // Collect all metrics
 func (c *taskCollector) Collect(ch chan<- prometheus.Metric) {
 	c.mutex.Lock()
@@ -131,10 +163,10 @@ func (c *taskCollector) Collect(ch chan<- prometheus.Metric) {
 		log.With("error", err).Error("failed to scrape tasks")
 		return
 	}
-	buckets, err := c.client.Buckets()
-	if err != nil {
+
+	if len(c.bucketsCache) == 0 {
 		ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 0)
-		log.With("error", err).Error("failed to scrape tasks")
+		log.Error("buckets cache is empty")
 		return
 	}
 
@@ -170,7 +202,7 @@ func (c *taskCollector) Collect(ch chan<- prometheus.Metric) {
 	// always report the compacting task, even if it is not happening
 	// this is to not break dashboards and make it easier to test alert rule
 	// and etc.
-	for _, bucket := range buckets {
+	for _, bucket := range c.bucketsCache {
 		if ok := compactsReported[bucket.Name]; !ok {
 			// nolint: lll
 			ch <- prometheus.MustNewConstMetric(c.compacting, prometheus.GaugeValue, 0, bucket.Name)

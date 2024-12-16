@@ -14,6 +14,10 @@ type bucketsCollector struct {
 	mutex  sync.Mutex
 	client client.Client
 
+	bucketsCache                []client.Bucket
+	cacheTimestamp              time.Time
+	bucketsCacheRefreshInterval time.Duration
+
 	up             *prometheus.Desc
 	scrapeDuration *prometheus.Desc
 
@@ -193,11 +197,12 @@ type bucketsCollector struct {
 }
 
 // NewBucketsCollector buckets collector
-func NewBucketsCollector(client client.Client) prometheus.Collector {
+func NewBucketsCollector(client client.Client, bucketsCacheRefreshInterval int) prometheus.Collector {
 	const subsystem = "bucket"
 	// nolint: lll
-	return &bucketsCollector{
-		client: client,
+	collector := &bucketsCollector{
+		client:                      client,
+		bucketsCacheRefreshInterval: time.Duration(bucketsCacheRefreshInterval) * time.Second,
 		up: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, subsystem, "up"),
 			"Couchbase buckets API is responding",
@@ -1243,6 +1248,11 @@ func NewBucketsCollector(client client.Client) prometheus.Collector {
 			nil,
 		),
 	}
+
+	// Start the background update process
+	go collector.startBackgroundUpdate(collector.bucketsCacheRefreshInterval)
+
+	return collector
 }
 
 // Describe all metrics
@@ -1424,6 +1434,27 @@ func (c *bucketsCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.statsXdcOps
 }
 
+func (c *bucketsCollector) startBackgroundUpdate(interval time.Duration) {
+	for {
+		c.updateBucketsCache()
+		time.Sleep(interval)
+	}
+}
+
+func (c *bucketsCollector) updateBucketsCache() {
+	log.Info("[bucketsCollector] Refreshing buckets cache...")
+	buckets, err := c.client.Buckets()
+	if err != nil {
+		log.With("error", err).Error("failed to refresh buckets cache")
+		return
+	}
+
+	c.mutex.Lock()
+	c.bucketsCache = buckets
+	c.cacheTimestamp = time.Now()
+	c.mutex.Unlock()
+}
+
 // Collect all metrics
 func (c *bucketsCollector) Collect(ch chan<- prometheus.Metric) {
 	c.mutex.Lock()
@@ -1432,16 +1463,15 @@ func (c *bucketsCollector) Collect(ch chan<- prometheus.Metric) {
 	start := time.Now()
 	log.Info("Collecting buckets metrics...")
 
-	buckets, err := c.client.Buckets()
-	if err != nil {
+	if len(c.bucketsCache) == 0 {
 		ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 0)
-		log.With("error", err).Error("failed to scrape buckets")
+		log.Error("buckets cache is empty")
 		return
 	}
 
 	var wg sync.WaitGroup
 
-	for _, bucket := range buckets {
+	for _, bucket := range c.bucketsCache {
 		wg.Add(1)
 
 		go func(bucket client.Bucket) {

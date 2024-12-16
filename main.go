@@ -27,6 +27,10 @@ var (
 	buckets = app.Flag("collectors.buckets", "Whether to collect buckets metrics").Default("true").Bool()
 	nodes   = app.Flag("collectors.nodes", "Whether to collect nodes metrics").Default("true").Bool()
 	cluster = app.Flag("collectors.cluster", "Whether to collect cluster metrics").Default("true").Bool()
+
+	tasksCollectorBucketsCacheRefreshIntervalSeconds = app.Flag("collector.tasks.buckets-cache-refresh-interval-seconds", "Buckets cache refresh interval seconds for tasks").Default("300").Int()
+
+	bucketsCollectorBucketsCacheRefreshIntervalSeconds = app.Flag("collector.buckets.buckets-cache-refresh-interval-seconds", "Buckets cache refresh interval seconds for buckets").Default("15").Int()
 )
 
 func main() {
@@ -35,14 +39,15 @@ func main() {
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	log.Info(fmt.Sprintf("starting couchbase-exporter %s...", version))
+	log.Info(fmt.Sprintf("Tasks Collector's bucket-cache-refresh-interval: '%d', Buckets Collector's bucket-cache-refresh-interval: '%d'", *tasksCollectorBucketsCacheRefreshIntervalSeconds, *bucketsCollectorBucketsCacheRefreshIntervalSeconds))
 
 	var client = client.New(*couchbaseURL, *couchbaseUsername, *couchbasePassword)
 
 	if *tasks {
-		prometheus.MustRegister(collector.NewTasksCollector(client))
+		prometheus.MustRegister(collector.NewTasksCollector(client, *tasksCollectorBucketsCacheRefreshIntervalSeconds))
 	}
 	if *buckets {
-		prometheus.MustRegister(collector.NewBucketsCollector(client))
+		prometheus.MustRegister(collector.NewBucketsCollector(client, *bucketsCollectorBucketsCacheRefreshIntervalSeconds))
 	}
 	if *nodes {
 		prometheus.MustRegister(collector.NewNodesCollector(client))
