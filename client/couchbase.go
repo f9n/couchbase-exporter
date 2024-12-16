@@ -3,7 +3,7 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	log "log/slog"
 	"net/http"
 	"strings"
@@ -51,7 +51,7 @@ func (c Client) get(path string, v interface{}) error {
 		return errors.Wrapf(err, "failed to get %s", path)
 	}
 
-	bts, err := ioutil.ReadAll(resp.Body)
+	bts, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read response body from %s", path)
 	}
