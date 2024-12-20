@@ -55,7 +55,7 @@ func NewClusterCollector(client client.Client) prometheus.Collector {
 		up: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, subsystem, "up"),
 			"Couchbase cluster API is responding",
-			nil,
+			[]string{"version"},
 			nil,
 		),
 		scrapeDuration: prometheus.NewDesc(
@@ -263,9 +263,14 @@ func (c *clusterCollector) Collect(ch chan<- prometheus.Metric) {
 
 	cluster, err := c.client.Cluster()
 	if err != nil {
-		ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 0)
+		ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 0, "")
 		log.With("error", err).Error("failed to scrape cluster")
 		return
+	}
+
+	version := ""
+	if len(cluster.Nodes) > 0 {
+		version = cluster.Nodes[0].Version
 	}
 
 	ch <- prometheus.MustNewConstMetric(c.balanced, prometheus.GaugeValue, fromBool(cluster.Balanced))
@@ -297,6 +302,6 @@ func (c *clusterCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(c.storagetotalsHddUsedbydata, prometheus.GaugeValue, cluster.StorageTotals.Hdd.UsedByData)
 	ch <- prometheus.MustNewConstMetric(c.storagetotalsHddFree, prometheus.GaugeValue, cluster.StorageTotals.Hdd.Free)
 
-	ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 1)
+	ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 1, version)
 	ch <- prometheus.MustNewConstMetric(c.scrapeDuration, prometheus.GaugeValue, time.Since(start).Seconds())
 }

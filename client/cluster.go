@@ -9,6 +9,10 @@ func (c Client) Cluster() (Cluster, error) {
 	return cluster, errors.Wrap(err, "failed to get cluster")
 }
 
+type Node struct {
+	Version string `json:"version"`
+}
+
 // Cluster (/pools/default)
 type Cluster struct {
 	StorageTotals struct {
@@ -48,4 +52,5 @@ type Cluster struct {
 	ServerGroupsURI     string   `json:"serverGroupsUri"`
 	ClusterName         string   `json:"clusterName"`
 	Balanced            bool     `json:"balanced"`
+	Nodes               []Node   `json:"nodes"`
 }
