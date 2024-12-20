@@ -31,6 +31,7 @@ var (
 	tasksCollectorBucketsCacheRefreshIntervalSeconds = app.Flag("collector.tasks.buckets-cache-refresh-interval-seconds", "Buckets cache refresh interval seconds for tasks").Default("300").Int()
 
 	bucketsCollectorBucketsCacheRefreshIntervalSeconds = app.Flag("collector.buckets.buckets-cache-refresh-interval-seconds", "Buckets cache refresh interval seconds for buckets").Default("15").Int()
+	bucketsCollectorBucketsMaxConcurrent               = app.Flag("collectors.buckets.max-concurent", "Max concurent operation for buckets").Default("5").Int()
 )
 
 func main() {
@@ -47,7 +48,13 @@ func main() {
 		prometheus.MustRegister(collector.NewTasksCollector(client, *tasksCollectorBucketsCacheRefreshIntervalSeconds))
 	}
 	if *buckets {
-		prometheus.MustRegister(collector.NewBucketsCollector(client, *bucketsCollectorBucketsCacheRefreshIntervalSeconds))
+		prometheus.MustRegister(
+			collector.NewBucketsCollector(
+				client,
+				*bucketsCollectorBucketsCacheRefreshIntervalSeconds,
+				*bucketsCollectorBucketsMaxConcurrent,
+			),
+		)
 	}
 	if *nodes {
 		prometheus.MustRegister(collector.NewNodesCollector(client))

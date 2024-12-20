@@ -17,6 +17,7 @@ type bucketsCollector struct {
 	bucketsCache                []client.Bucket
 	cacheTimestamp              time.Time
 	bucketsCacheRefreshInterval time.Duration
+	bucketsMaxConcurent         int
 
 	up             *prometheus.Desc
 	scrapeDuration *prometheus.Desc
@@ -197,12 +198,13 @@ type bucketsCollector struct {
 }
 
 // NewBucketsCollector buckets collector
-func NewBucketsCollector(client client.Client, bucketsCacheRefreshInterval int) prometheus.Collector {
+func NewBucketsCollector(client client.Client, bucketsCacheRefreshInterval int, bucketsMaxConcurent int) prometheus.Collector {
 	const subsystem = "bucket"
 	// nolint: lll
 	collector := &bucketsCollector{
 		client:                      client,
 		bucketsCacheRefreshInterval: time.Duration(bucketsCacheRefreshInterval) * time.Second,
+		bucketsMaxConcurent:         bucketsMaxConcurent,
 		up: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, subsystem, "up"),
 			"Couchbase buckets API is responding",
@@ -1469,9 +1471,19 @@ func (c *bucketsCollector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
+	limitConcurrent := c.bucketsMaxConcurent
+	if halfBuckets := len(c.bucketsCache) / 2; halfBuckets < limitConcurrent {
+		limitConcurrent = halfBuckets
+	}
+
+	log.Info(fmt.Sprintf("[bucketsCollector] LimitConcurent: '%d'\n", limitConcurrent))
+
 	var wg sync.WaitGroup
 
-	for _, bucket := range c.bucketsCache {
+	for i, bucket := range c.bucketsCache {
+		if i%limitConcurrent == 0 && i > 0 {
+			wg.Wait()
+		}
 		wg.Add(1)
 
 		go func(bucket client.Bucket) {
