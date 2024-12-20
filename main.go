@@ -32,6 +32,7 @@ var (
 
 	bucketsCollectorBucketsCacheRefreshIntervalSeconds = app.Flag("collector.buckets.buckets-cache-refresh-interval-seconds", "Buckets cache refresh interval seconds for buckets").Default("15").Int()
 	bucketsCollectorBucketsMaxConcurrent               = app.Flag("collectors.buckets.max-concurent", "Max concurent operation for buckets").Default("5").Int()
+	bucketsCollectorBucketsLimitlessConcurrent         = app.Flag("collectors.buckets.limitless-concurent", "Limitless concurent operation for buckets").Default("false").Bool()
 )
 
 func main() {
@@ -53,6 +54,7 @@ func main() {
 				client,
 				*bucketsCollectorBucketsCacheRefreshIntervalSeconds,
 				*bucketsCollectorBucketsMaxConcurrent,
+				*bucketsCollectorBucketsLimitlessConcurrent,
 			),
 		)
 	}
