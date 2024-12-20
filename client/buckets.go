@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -15,8 +16,13 @@ func (c Client) Buckets() ([]Bucket, error) {
 
 // BucketStats returns the results of /pools/default/buckets/<bucket_name>/stats
 func (c Client) BucketStats(name string) (BucketStats, error) {
+	unixMilli := time.Now().UnixMilli() - 500
+	url := fmt.Sprintf("/pools/default/buckets/%s/stats?haveTStamp=%d", name, unixMilli)
+	fmt.Printf("[bucket-stats]: Url: %s\n", url)
 	var stats BucketStats
-	err := c.get(fmt.Sprintf("/pools/default/buckets/%s/stats", name), &stats)
+	err := c.get(url, &stats)
+
+	fmt.Printf("[bucket-stats]: Url: %s, CouchTotalDiskSize:Len: %d\n", url, len(stats.Op.Samples.CouchTotalDiskSize))
 	return stats, errors.Wrap(err, "failed to get bucket stats")
 }
 
