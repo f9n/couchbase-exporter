@@ -55,7 +55,7 @@ func NewClusterCollector(client client.Client) prometheus.Collector {
 		up: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, subsystem, "up"),
 			"Couchbase cluster API is responding",
-			[]string{"version"},
+			[]string{"version", "server_group"},
 			nil,
 		),
 		scrapeDuration: prometheus.NewDesc(
@@ -269,8 +269,19 @@ func (c *clusterCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	version := ""
+	serverGroups := make(map[string]struct{})
 	if len(cluster.Nodes) > 0 {
-		version = cluster.Nodes[0].Version
+		for _, node := range cluster.Nodes {
+			if version == "" {
+				version = node.Version
+			}
+			serverGroups[node.ServerGroup] = struct{}{}
+		}
+	}
+
+	isServerGroup := "false"
+	if len(serverGroups) > 1 {
+		isServerGroup = "true"
 	}
 
 	ch <- prometheus.MustNewConstMetric(c.balanced, prometheus.GaugeValue, fromBool(cluster.Balanced))
@@ -302,6 +313,6 @@ func (c *clusterCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(c.storagetotalsHddUsedbydata, prometheus.GaugeValue, cluster.StorageTotals.Hdd.UsedByData)
 	ch <- prometheus.MustNewConstMetric(c.storagetotalsHddFree, prometheus.GaugeValue, cluster.StorageTotals.Hdd.Free)
 
-	ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 1, version)
+	ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 1, version, isServerGroup)
 	ch <- prometheus.MustNewConstMetric(c.scrapeDuration, prometheus.GaugeValue, time.Since(start).Seconds())
 }

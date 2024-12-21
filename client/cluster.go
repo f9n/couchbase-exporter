@@ -10,7 +10,8 @@ func (c Client) Cluster() (Cluster, error) {
 }
 
 type Node struct {
-	Version string `json:"version"`
+	Version     string `json:"version"`
+	ServerGroup string `json:"serverGroup"`
 }
 
 // Cluster (/pools/default)
