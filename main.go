@@ -17,6 +17,7 @@ import (
 var (
 	version           = "dev"
 	app               = kingpin.New("couchbase-exporter", "exports couchbase metrics in the prometheus format")
+	logLevel          = app.Flag("log.level", "Couchbase URL to scrape").Default("info").String()
 	listenAddress     = app.Flag("web.listen-address", "Address to listen on for web interface and telemetry").Default(":9420").String()
 	metricsPath       = app.Flag("web.telemetry-path", "Path under which to expose metrics").Default("/metrics").String()
 	couchbaseURL      = app.Flag("couchbase.url", "Couchbase URL to scrape").Default("http://localhost:8091").String()
@@ -39,6 +40,30 @@ func main() {
 	app.Version(version)
 	app.HelpFlag.Short('h')
 	kingpin.MustParse(app.Parse(os.Args[1:]))
+
+	var level log.Level
+	switch *logLevel {
+	case "debug":
+		level = log.LevelDebug
+	case "info":
+		level = log.LevelInfo
+	case "warn":
+		level = log.LevelWarn
+	case "error":
+		level = log.LevelError
+	default:
+		level = log.LevelInfo
+	}
+
+	logger := log.New(
+		log.NewJSONHandler(
+			os.Stdout, &log.HandlerOptions{
+				Level: level,
+			},
+		),
+	)
+
+	log.SetDefault(logger)
 
 	log.Info(fmt.Sprintf("starting couchbase-exporter %s...", version))
 	log.Info(fmt.Sprintf("Tasks Collector's bucket-cache-refresh-interval: '%d', Buckets Collector's bucket-cache-refresh-interval: '%d'", *tasksCollectorBucketsCacheRefreshIntervalSeconds, *bucketsCollectorBucketsCacheRefreshIntervalSeconds))

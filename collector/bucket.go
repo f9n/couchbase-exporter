@@ -1446,7 +1446,7 @@ func (c *bucketsCollector) startBackgroundUpdate(interval time.Duration) {
 }
 
 func (c *bucketsCollector) updateBucketsCache() {
-	log.Info("[bucketsCollector] Refreshing buckets cache...")
+	log.Debug("[bucketsCollector] Refreshing buckets cache...")
 	buckets, err := c.client.Buckets()
 	if err != nil {
 		log.With("error", err).Error("failed to refresh buckets cache")
@@ -1478,8 +1478,8 @@ func (c *bucketsCollector) Collect(ch chan<- prometheus.Metric) {
 		limitConcurrent = halfBuckets
 	}
 
-	log.Info(fmt.Sprintf("[bucketsCollector] LimitlessConcurent: '%t'\n", c.bucketsLimitlessConcurent))
-	log.Info(fmt.Sprintf("[bucketsCollector] LimitConcurent: '%d'\n", limitConcurrent))
+	log.Debug(fmt.Sprintf("[bucketsCollector] LimitlessConcurent: '%t'\n", c.bucketsLimitlessConcurent))
+	log.Debug(fmt.Sprintf("[bucketsCollector] LimitConcurent: '%d'\n", limitConcurrent))
 
 	var wg sync.WaitGroup
 

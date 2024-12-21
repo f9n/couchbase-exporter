@@ -136,7 +136,7 @@ func (c *taskCollector) startBackgroundUpdate(interval time.Duration) {
 }
 
 func (c *taskCollector) updateBucketsCache() {
-	log.Info("[taskCollector] Refreshing buckets cache...")
+	log.Debug("[taskCollector] Refreshing buckets cache...")
 	buckets, err := c.client.Buckets()
 	if err != nil {
 		log.With("error", err).Error("failed to refresh buckets cache")
