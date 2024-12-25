@@ -3,6 +3,7 @@ package collector
 import (
 	"fmt"
 	log "log/slog"
+	"math"
 	"sync"
 	"time"
 
@@ -1474,7 +1475,8 @@ func (c *bucketsCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	limitConcurrent := c.bucketsMaxConcurent
-	if halfBuckets := len(c.bucketsCache) / 2; halfBuckets < limitConcurrent {
+	halfBuckets := int(math.Ceil(float64(len(c.bucketsCache)) / 2.0))
+	if halfBuckets < limitConcurrent {
 		limitConcurrent = halfBuckets
 	}
 
