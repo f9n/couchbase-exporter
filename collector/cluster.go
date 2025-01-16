@@ -260,15 +260,16 @@ func (c *clusterCollector) Collect(ch chan<- prometheus.Metric) {
 
 	start := time.Now()
 	log.Info("Collecting cluster metrics...")
+	version := ""
+	isServerGroup := "false"
 
 	cluster, err := c.client.Cluster()
 	if err != nil {
-		ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 0, "")
+		ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 0, version, isServerGroup)
 		log.With("error", err).Error("failed to scrape cluster")
 		return
 	}
 
-	version := ""
 	serverGroups := make(map[string]struct{})
 	if len(cluster.Nodes) > 0 {
 		for _, node := range cluster.Nodes {
@@ -279,7 +280,6 @@ func (c *clusterCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 
-	isServerGroup := "false"
 	if len(serverGroups) > 1 {
 		isServerGroup = "true"
 	}
