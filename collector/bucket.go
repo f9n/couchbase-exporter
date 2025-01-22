@@ -1501,7 +1501,7 @@ func (c *bucketsCollector) Collect(ch chan<- prometheus.Metric) {
 			if err != nil {
 				log.With("bucket", bucket.Name).Error(fmt.Sprintf("failed to scrape bucket stats: err: %s", err.Error()))
 				// Directly send metric to channel
-				ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 0, bucket.Name)
+				ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 0)
 				return
 			}
 
